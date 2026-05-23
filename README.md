@@ -15,12 +15,15 @@ macOS 전자책 뷰어에서 원하는 화면 영역을 지정한 뒤, 페이지
 
 ## Quick Start
 
+clone 후 먼저 macOS 앱을 빌드합니다.
+
 ```bash
+swiftc -module-cache-path mac/.swift-module-cache mac/EbookCapture.swift -o mac/EbookCapture
 ./mac/EbookCapture
 ```
 
 1. 전자책 뷰어에서 캡처를 시작할 페이지로 이동합니다.
-2. `mac/EbookCapture`를 실행합니다.
+2. 위 명령으로 `EbookCapture`를 빌드하고 실행합니다.
 3. `저장 경로`를 지정합니다.
 4. `영역 드래그 선택`으로 캡처할 페이지 영역을 지정합니다.
 5. 캡처 모드를 선택합니다.
@@ -61,3 +64,5 @@ macOS 전자책 뷰어에서 원하는 화면 영역을 지정한 뒤, 페이지
 ```bash
 swiftc -module-cache-path mac/.swift-module-cache mac/EbookCapture.swift -o mac/EbookCapture
 ```
+
+빌드된 실행 파일은 `mac/EbookCapture`에 생성됩니다. 이 파일은 Git에 포함하지 않습니다.
