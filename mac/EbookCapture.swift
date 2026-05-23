@@ -137,7 +137,7 @@ final class RegionSelectionView: NSView {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let repositoryURLString = "https://github.com/wowddok99/ebook-capture"
     private var window: NSWindow!
-    private var selectionWindow: NSWindow?
+    private var selectionWindows: [NSWindow] = []
     private var outputField: NSTextField!
     private var maxPagesLabel: NSTextField!
     private var maxPagesField: NSTextField!
@@ -348,44 +348,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func selectRegion() {
         window.orderOut(nil)
-        let desktopFrame = NSScreen.screens.map(\.frame).reduce(NSRect.null) { $0.union($1) }
-        let screenFrame = desktopFrame.isNull ? NSRect(x: 0, y: 0, width: 1440, height: 900) : desktopFrame
-        let view = RegionSelectionView(
-            frame: NSRect(origin: .zero, size: screenFrame.size),
-            desktopFrame: screenFrame,
-            screens: NSScreen.screens
-        )
-        let overlay = NSWindow(
-            contentRect: screenFrame,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        overlay.level = .screenSaver
-        overlay.backgroundColor = .clear
-        overlay.isOpaque = false
-        overlay.isReleasedWhenClosed = false
-        overlay.contentView = view
-        overlay.makeKeyAndOrderFront(nil)
-        overlay.makeFirstResponder(view)
-        selectionWindow = overlay
+        let screens = NSScreen.screens
+        selectionWindows = screens.map { screen in
+            let view = RegionSelectionView(
+                frame: NSRect(origin: .zero, size: screen.frame.size),
+                desktopFrame: screen.frame,
+                screens: screens
+            )
+            let overlay = NSWindow(
+                contentRect: screen.frame,
+                styleMask: [.borderless],
+                backing: .buffered,
+                defer: false
+            )
+            overlay.level = .screenSaver
+            overlay.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            overlay.backgroundColor = .clear
+            overlay.isOpaque = false
+            overlay.isReleasedWhenClosed = false
+            overlay.contentView = view
+            overlay.orderFrontRegardless()
+            overlay.makeFirstResponder(view)
+            view.onFinish = { [weak self] selected in
+                DispatchQueue.main.async {
+                    self?.finishRegionSelection()
+                    self?.setRegion(selected)
+                }
+            }
+            view.onCancel = { [weak self] in
+                DispatchQueue.main.async {
+                    self?.cancelRegionSelection()
+                }
+            }
+            return overlay
+        }
         selectionKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
                 self?.cancelRegionSelection()
                 return nil
             }
             return event
-        }
-        view.onFinish = { [weak self] selected in
-            DispatchQueue.main.async {
-                self?.finishRegionSelection()
-                self?.setRegion(selected)
-            }
-        }
-        view.onCancel = { [weak self] in
-            DispatchQueue.main.async {
-                self?.cancelRegionSelection()
-            }
         }
     }
 
@@ -394,8 +396,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(selectionKeyMonitor)
             self.selectionKeyMonitor = nil
         }
-        selectionWindow?.orderOut(nil)
-        selectionWindow = nil
+        selectionWindows.forEach { $0.orderOut(nil) }
+        selectionWindows = []
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
